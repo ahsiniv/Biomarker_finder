@@ -15,7 +15,34 @@ reports/
 data/
 
 # VS Code
+.vscode/# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# Output files
+outputs/
+reports/
+data/
+
+# Logs
+*.log
+
+# IDE files
 .vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
 
 # Logs
 *.log
