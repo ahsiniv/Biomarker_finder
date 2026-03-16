@@ -1,0 +1,22 @@
+GEOparse
+pandas
+numpy
+scipy
+matplotlib
+seaborn
+requests
+biopython
+networkx
+upsetplot
+reportlab
+python-dotenv
+statsmodels
+scikit-learn
+tqdm
+openpyxl
+xmltodict
+
+# Web server
+fastapi
+uvicorn[standard]
+python-multipart

@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Clinical Biomarker Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050810;
+  --surface: #0c1220;
+  --surface2: #111827;
+  --border: rgba(56,189,248,0.12);
+  --accent: #38bdf8;
+  --accent2: #818cf8;
+  --accent3: #34d399;
+  --warn: #fb923c;
+  --danger: #f87171;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --glow: 0 0 30px rgba(56,189,248,0.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Syne',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── Background grid ─────────────────────────── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(56,189,248,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(56,189,248,0.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';
+  position:fixed;top:-50%;left:-50%;
+  width:200%;height:200%;
+  background:radial-gradient(ellipse 60% 50% at 70% 20%,rgba(129,140,248,0.06) 0%,transparent 60%),
+              radial-gradient(ellipse 50% 40% at 20% 80%,rgba(56,189,248,0.05) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
+  animation:bgPulse 12s ease-in-out infinite alternate;
+}
+@keyframes bgPulse{
+  0%{opacity:.6} 100%{opacity:1}
+}
+
+/* ── Layout ────────────────────────────────────── */
+.wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:0 24px}
+
+/* ── Header ─────────────────────────────────────  */
+header{
+  padding:32px 0 20px;
+  display:flex;align-items:center;gap:20px;
+  border-bottom:1px solid var(--border);
+}
+.logo-mark{
+  width:48px;height:48px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;
+  box-shadow:0 0 20px rgba(56,189,248,0.3);
+  flex-shrink:0;
+}
+header h1{
+  font-size:1.6rem;font-weight:800;letter-spacing:-0.5px;
+  background:linear-gradient(90deg,#e2e8f0,var(--accent));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+header p{font-size:.82rem;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px}
+.header-badges{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.hbadge{
+  font-family:'Space Mono',monospace;font-size:.68rem;
+  padding:4px 10px;border-radius:20px;
+  border:1px solid var(--border);color:var(--muted);
+}
+
+/* ── Main grid ──────────────────────────────────── */
+.main-grid{
+  display:grid;
+  grid-template-columns:360px 1fr;
+  gap:24px;
+  padding:28px 0 60px;
+  align-items:start;
+}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+
+/* ── Panel base ─────────────────────────────────── */
+.panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+}
+.panel-head{
+  padding:18px 22px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.panel-head h2{font-size:.9rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--accent)}
+.panel-icon{font-size:1rem;opacity:.7}
+.panel-body{padding:22px}
+
+/* ── Form ───────────────────────────────────────── */
+.form-group{margin-bottom:18px}
+label{
+  display:block;
+  font-size:.72rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:7px;
+}
+input,select{
+  width:100%;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:9px;
+  padding:11px 14px;
+  color:var(--text);
+  font-family:'Syne',sans-serif;
+  font-size:.88rem;
+  transition:border-color .2s,box-shadow .2s;
+  outline:none;
+}
+input:focus,select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(56,189,248,0.1);
+}
+input::placeholder{color:var(--muted)}
+select option{background:var(--surface2)}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.disease-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip{
+  font-size:.72rem;font-family:'Space Mono',monospace;
+  padding:4px 10px;border-radius:6px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+
+.btn-run{
+  width:100%;
+  padding:14px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;color:#050810;
+  font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;
+  letter-spacing:.3px;cursor:pointer;
+  transition:opacity .2s,transform .15s,box-shadow .2s;
+  box-shadow:0 0 20px rgba(56,189,248,0.25);
+  margin-top:6px;
+}
+.btn-run:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 0 30px rgba(56,189,248,0.4)}
+.btn-run:active{transform:translateY(0)}
+.btn-run:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ── Job history ────────────────────────────────── */
+.job-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border-radius:9px;
+  background:var(--surface2);border:1px solid var(--border);
+  margin-bottom:8px;cursor:pointer;transition:border-color .15s;
+  font-size:.82rem;
+}
+.job-item:hover{border-color:var(--accent)}
+.job-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-queued{background:var(--muted)}
+.dot-running{background:var(--accent);animation:blink 1s infinite}
+.dot-completed{background:var(--accent3)}
+.dot-failed{background:var(--danger)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.job-name{flex:1;font-weight:700;font-size:.8rem}
+.job-meta{color:var(--muted);font-family:'Space Mono',monospace;font-size:.68rem}
+
+/* ── Right panel tabs ───────────────────────────── */
+.tabs{display:flex;gap:2px;padding:6px 6px 0;border-bottom:1px solid var(--border)}
+.tab{
+  padding:9px 18px;border-radius:8px 8px 0 0;
+  font-size:.78rem;font-weight:700;letter-spacing:.3px;
+  cursor:pointer;color:var(--muted);transition:all .15s;
+  border:1px solid transparent;border-bottom:none;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);background:var(--surface);border-color:var(--border)}
+.tab-content{padding:24px;display:none}
+.tab-content.active{display:block}
+
+/* ── Pipeline tracker ───────────────────────────── */
+#view-idle{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:400px;text-align:center;gap:16px;
+}
+.idle-icon{font-size:4rem;opacity:.2;animation:float 4s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.idle-title{font-size:1.1rem;font-weight:700;color:var(--muted)}
+.idle-sub{font-size:.8rem;color:var(--muted);font-family:'Space Mono',monospace;opacity:.6}
+
+.progress-wrap{padding:24px}
+.prog-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.prog-label{font-size:.78rem;font-weight:700;color:var(--accent)}
+.prog-pct{font-family:'Space Mono',monospace;font-size:.78rem;color:var(--muted)}
+.prog-bar{
+  height:6px;border-radius:3px;
+  background:var(--surface2);overflow:hidden;
+}
+.prog-fill{
+  height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  transition:width .5s ease;
+  box-shadow:0 0 10px var(--accent);
+}
+
+.steps-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+  padding:0 24px 20px;
+}
+.step-box{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:14px 12px;text-align:center;
+  transition:all .3s;
+}
+.step-box.active{border-color:var(--accent);box-shadow:0 0 15px rgba(56,189,248,0.15)}
+.step-box.done{border-color:var(--accent3);background:rgba(52,211,153,0.05)}
+.step-num{
+  font-family:'Space Mono',monospace;font-size:.7rem;
+  color:var(--muted);margin-bottom:4px;
+}
+.step-name{font-size:.72rem;font-weight:700;color:var(--muted);line-height:1.3}
+.step-box.active .step-name{color:var(--accent)}
+.step-box.done .step-name{color:var(--accent3)}
+.step-spinner{
+  display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(56,189,248,0.2);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin .7s linear infinite;margin-bottom:4px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.log-box{
+  margin:0 24px 20px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;
+  font-family:'Space Mono',monospace;font-size:.72rem;
+  color:#94a3b8;line-height:1.8;
+  max-height:220px;overflow-y:auto;
+  padding:14px 16px;
+}
+.log-box .log-line{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+.log-line.step{color:var(--accent);font-weight:700}
+.log-line.ok{color:var(--accent3)}
+.log-line.warn{color:var(--warn)}
+.log-line.err{color:var(--danger)}
+
+/* ── Results ────────────────────────────────────── */
+.results-wrap{display:none}
+.results-wrap.show{display:block}
+
+.results-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;flex-wrap:wrap;gap:12px;
+}
+.results-title{
+  font-size:1.3rem;font-weight:800;
+  background:linear-gradient(90deg,var(--text),var(--accent));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.download-btns{display:flex;gap:8px;flex-wrap:wrap}
+.dl-btn{
+  padding:8px 14px;border-radius:8px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--text);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;
+  cursor:pointer;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+}
+.dl-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+.stat-row{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+  margin-bottom:24px;
+}
+.stat-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;padding:18px 16px;text-align:center;
+}
+.stat-n{font-size:2rem;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace}
+.stat-l{font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
+
+/* Biomarker table */
+.bm-table-wrap{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;margin-bottom:24px;
+}
+.bm-table-head{
+  padding:14px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+.bm-table-head h3{font-size:.85rem;font-weight:700;color:var(--accent);letter-spacing:.4px;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{
+  padding:10px 14px;text-align:left;
+  font-size:.7rem;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--muted);border-bottom:1px solid var(--border);
+  font-family:'Space Mono',monospace;font-weight:400;
+}
+td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(56,189,248,0.03)}
+.rank-num{font-family:'Space Mono',monospace;color:var(--muted);font-size:.75rem}
+.gene-name{font-weight:800;font-size:.9rem;color:var(--text)}
+.score-bar-wrap{display:flex;align-items:center;gap:8px}
+.score-bar{height:4px;border-radius:2px;background:var(--surface);flex:1;overflow:hidden}
+.score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.score-val{font-family:'Space Mono',monospace;font-size:.72rem;color:var(--muted);white-space:nowrap}
+.dir-up{
+  background:rgba(248,113,113,0.15);color:#fca5a5;
+  padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:700;
+  font-family:'Space Mono',monospace;
+}
+.dir-dn{
+  background:rgba(56,189,248,0.15);color:#7dd3fc;
+  padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:700;
+  font-family:'Space Mono',monospace;
+}
+.fc-pos{color:#fca5a5;font-family:'Space Mono',monospace;font-size:.78rem}
+.fc-neg{color:#7dd3fc;font-family:'Space Mono',monospace;font-size:.78rem}
+.pval{color:var(--muted);font-family:'Space Mono',monospace;font-size:.72rem}
+
+/* Enrichment section */
+.enrich-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
+  margin-bottom:24px;
+}
+@media(max-width:700px){.enrich-grid{grid-template-columns:1fr}}
+.enrich-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;
+}
+.enrich-card-head{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--accent2);
+}
+.enrich-item{
+  padding:9px 16px;border-bottom:1px solid rgba(255,255,255,0.03);
+  display:flex;align-items:center;gap:10px;
+}
+.enrich-item:last-child{border-bottom:none}
+.enrich-bar{
+  width:3px;min-height:28px;border-radius:2px;
+  background:linear-gradient(180deg,var(--accent2),var(--accent3));
+  flex-shrink:0;
+}
+.enrich-term{font-size:.78rem;font-weight:600;line-height:1.3;flex:1}
+.enrich-p{
+  font-family:'Space Mono',monospace;font-size:.65rem;
+  color:var(--accent3);white-space:nowrap;
+}
+
+/* Plots section */
+.plots-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
+  margin-bottom:24px;
+}
+@media(max-width:700px){.plots-grid{grid-template-columns:1fr}}
+.plot-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;
+}
+.plot-card-head{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+  display:flex;align-items:center;gap:6px;
+}
+.plot-card img{width:100%;display:block}
+.plot-placeholder{
+  display:flex;align-items:center;justify-content:center;
+  min-height:160px;color:var(--muted);font-size:.8rem;
+  font-family:'Space Mono',monospace;
+}
+
+/* Hub genes bar */
+.hub-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:10px;margin-bottom:24px;
+}
+.hub-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;
+  display:flex;align-items:center;gap:10px;
+}
+.hub-rank{
+  font-family:'Space Mono',monospace;font-size:.68rem;
+  color:var(--muted);width:20px;flex-shrink:0;
+}
+.hub-name{font-weight:800;font-size:.85rem;flex:1}
+.hub-score{
+  font-family:'Space Mono',monospace;font-size:.7rem;
+  color:var(--accent);background:rgba(56,189,248,0.1);
+  padding:2px 7px;border-radius:5px;
+}
+
+/* Report link */
+.report-link-box{
+  background:linear-gradient(135deg,rgba(56,189,248,0.08),rgba(129,140,248,0.08));
+  border:1px solid rgba(56,189,248,0.2);border-radius:12px;
+  padding:20px 22px;display:flex;align-items:center;gap:14px;
+  margin-bottom:24px;
+}
+.report-link-box .icon{font-size:2rem}
+.report-link-box .text h3{font-size:.95rem;font-weight:700;margin-bottom:3px}
+.report-link-box .text p{font-size:.78rem;color:var(--muted)}
+.report-link-box a{
+  margin-left:auto;padding:10px 18px;
+  background:var(--accent);color:#050810;
+  border-radius:8px;font-weight:800;font-size:.82rem;
+  text-decoration:none;white-space:nowrap;
+  transition:opacity .15s;
+}
+.report-link-box a:hover{opacity:.85}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-mark">🧬</div>
+    <div>
+      <h1>AI Clinical Biomarker Finder</h1>
+      <p>GEO → DEG → PPI → Enrichment → LLM Literature Mining</p>
+    </div>
+    <div class="header-badges">
+      <span class="hbadge">NCBI GEO</span>
+      <span class="hbadge">STRING</span>
+      <span class="hbadge">Enrichr</span>
+      <span class="hbadge">Ollama LLM</span>
+    </div>
+  </header>
+
+  <!-- Main Grid -->
+  <div class="main-grid">
+
+    <!-- LEFT: Submit panel -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- Launch Form -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-icon">🚀</span>
+          <h2>New Analysis</h2>
+        </div>
+        <div class="panel-body">
+
+          <div class="form-group">
+            <label>Disease Name</label>
+            <div class="disease-chips">
+              <span class="chip" onclick="setDisease(this)">Diabetes Mellitus</span>
+              <span class="chip" onclick="setDisease(this)">Breast Cancer</span>
+              <span class="chip" onclick="setDisease(this)">Coronary Artery Disease</span>
+              <span class="chip" onclick="setDisease(this)">Alzheimer Disease</span>
+              <span class="chip" onclick="setDisease(this)">Hypertension</span>
+            </div>
+            <input type="text" id="disease" placeholder="e.g. diabetic retinopathy" value="diabetes mellitus">
+          </div>
+
+          <div class="row2">
+            <div class="form-group">
+              <label>GEO Datasets</label>
+              <select id="datasets">
+                <option value="1">1 dataset</option>
+                <option value="2">2 datasets</option>
+                <option value="3" selected>3 datasets</option>
+                <option value="5">5 datasets</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Top Biomarkers</label>
+              <select id="top_biomarkers">
+                <option value="10">Top 10</option>
+                <option value="20" selected>Top 20</option>
+                <option value="30">Top 30</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row2">
+            <div class="form-group">
+              <label>adj.p-value</label>
+              <input type="number" id="pvalue" value="0.05" step="0.01" min="0.01" max="0.5">
+            </div>
+            <div class="form-group">
+              <label>|log₂FC| ≥</label>
+              <input type="number" id="logfc" value="1.0" step="0.1" min="0.1" max="3">
+            </div>
+          </div>
+
+          <button class="btn-run" id="btnRun" onclick="submitJob()">▶ Run Pipeline</button>
+        </div>
+      </div>
+
+      <!-- Job History -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-icon">📋</span>
+          <h2>Job History</h2>
+        </div>
+        <div class="panel-body" id="jobList">
+          <div style="color:var(--muted);font-size:.8rem;font-family:'Space Mono',monospace;text-align:center;padding:20px 0">
+            No jobs yet
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- RIGHT: Results panel -->
+    <div class="panel" style="min-height:500px">
+
+      <!-- Idle state -->
+      <div id="view-idle">
+        <div class="idle-icon">🔬</div>
+        <div class="idle-title">No analysis running</div>
+        <div class="idle-sub">Submit a disease to begin</div>
+      </div>
+
+      <!-- Running state -->
+      <div id="view-running" style="display:none">
+
+        <!-- Step tracker -->
+        <div style="padding:22px 24px 12px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <div class="step-spinner"></div>
+            <span id="runningTitle" style="font-weight:800;font-size:1rem"></span>
+          </div>
+          <div class="prog-header">
+            <span class="prog-label" id="progLabel">Starting...</span>
+            <span class="prog-pct" id="progPct">0%</span>
+          </div>
+          <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-box" id="step1"><div class="step-num">01</div><div class="step-name">GEO Retrieval</div></div>
+          <div class="step-box" id="step2"><div class="step-num">02</div><div class="step-name">DEG Analysis</div></div>
+          <div class="step-box" id="step3"><div class="step-num">03</div><div class="step-name">Enrichment</div></div>
+          <div class="step-box" id="step4"><div class="step-num">04</div><div class="step-name">PPI Network</div></div>
+          <div class="step-box" id="step5"><div class="step-num">05</div><div class="step-name">Scoring</div></div>
+          <div class="step-box" id="step6"><div class="step-num">06</div><div class="step-name">Literature AI</div></div>
+          <div class="step-box" id="step7"><div class="step-num">07</div><div class="step-name">Reports</div></div>
+        </div>
+
+        <div class="log-box" id="logBox"></div>
+      </div>
+
+      <!-- Results state -->
+      <div id="view-results" style="display:none;padding:24px">
+        <div class="results-wrap show" id="resultsContent"></div>
+      </div>
+
+    </div><!-- /right -->
+  </div>
+</div>
+
+<script>
+let currentJobId = null;
+let jobHistory = [];
+
+function setDisease(el) {
+  document.getElementById('disease').value = el.textContent;
+}
+
+async function submitJob() {
+  const disease = document.getElementById('disease').value.trim();
+  if (!disease) { alert('Please enter a disease name'); return; }
+
+  const btn = document.getElementById('btnRun');
+  btn.disabled = true;
+
+  const payload = {
+    disease,
+    datasets: parseInt(document.getElementById('datasets').value),
+    top_biomarkers: parseInt(document.getElementById('top_biomarkers').value),
+    pvalue: parseFloat(document.getElementById('pvalue').value),
+    logfc: parseFloat(document.getElementById('logfc').value),
+  };
+
+  try {
+    const res = await fetch('/api/jobs', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    currentJobId = data.job_id;
+    addJobToHistory(currentJobId, disease, 'running');
+    showRunning(disease);
+    streamJob(currentJobId);
+  } catch(e) {
+    alert('Failed to start job: ' + e.message);
+    btn.disabled = false;
+  }
+}
+
+function showRunning(disease) {
+  document.getElementById('view-idle').style.display = 'none';
+  document.getElementById('view-results').style.display = 'none';
+  document.getElementById('view-running').style.display = 'block';
+  document.getElementById('runningTitle').textContent = disease;
+  document.getElementById('logBox').innerHTML = '';
+  setProgress(0, 'Initializing...');
+  // Reset steps
+  for(let i=1;i<=7;i++) {
+    const el = document.getElementById('step'+i);
+    el.classList.remove('active','done');
+  }
+}
+
+function setProgress(val, label) {
+  document.getElementById('progFill').style.width = val + '%';
+  document.getElementById('progPct').textContent = val + '%';
+  document.getElementById('progLabel').textContent = label;
+}
+
+function setStep(num) {
+  for(let i=1;i<num;i++) {
+    const el = document.getElementById('step'+i);
+    el.classList.remove('active');
+    el.classList.add('done');
+  }
+  const cur = document.getElementById('step'+num);
+  if(cur) { cur.classList.remove('done'); cur.classList.add('active'); }
+}
+
+function addLog(msg) {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('span');
+  line.className = 'log-line';
+
+  if(msg.includes('STEP') || msg.includes('─') || msg.includes('═')) line.classList.add('step');
+  else if(msg.includes('✅') || msg.includes('✓')) line.classList.add('ok');
+  else if(msg.includes('⚠️') || msg.includes('⚠')) line.classList.add('warn');
+  else if(msg.includes('✗') || msg.includes('❌')) line.classList.add('err');
+
+  line.textContent = msg;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function streamJob(jobId) {
+  const evtSource = new EventSource(`/api/jobs/${jobId}/stream`);
+
+  evtSource.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+
+    if(msg.type === 'log') {
+      addLog(msg.message);
+    } else if(msg.type === 'step') {
+      setStep(msg.step);
+      addLog(`► ${msg.label}`);
+    } else if(msg.type === 'progress') {
+      setProgress(msg.value, msg.label);
+    } else if(msg.type === 'complete') {
+      evtSource.close();
+      updateJobStatus(jobId, 'completed');
+      document.getElementById('btnRun').disabled = false;
+      showResults(msg.results);
+    } else if(msg.type === 'error') {
+      evtSource.close();
+      addLog('ERROR: ' + msg.message);
+      updateJobStatus(jobId, 'failed');
+      document.getElementById('btnRun').disabled = false;
+    } else if(msg.type === 'done') {
+      evtSource.close();
+    }
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    document.getElementById('btnRun').disabled = false;
+  };
+}
+
+function showResults(results) {
+  // Mark all steps done
+  for(let i=1;i<=7;i++) {
+    const el = document.getElementById('step'+i);
+    el.classList.remove('active');
+    el.classList.add('done');
+  }
+
+  setTimeout(() => {
+    document.getElementById('view-running').style.display = 'none';
+    document.getElementById('view-results').style.display = 'block';
+
+    const biomarkers = results.biomarkers || [];
+    const enrichment = results.enrichment || {};
+    const hubGenes = results.hub_genes || [];
+    const plots = results.plots || {};
+
+    // Stats
+    const upCount = biomarkers.filter(b => b.direction === 'UP').length;
+    const downCount = biomarkers.filter(b => b.direction !== 'UP').length;
+    const pathCount = Object.values(enrichment).reduce((a,v) => a + v.length, 0);
+
+    let html = `
+    <div class="results-header">
+      <div class="results-title">Analysis Results</div>
+      <div class="download-btns">
+        ${results.html_report ? `<a class="dl-btn" href="${results.html_report}" target="_blank">🌐 HTML Report</a>` : ''}
+        ${results.csv_path ? `<a class="dl-btn" href="${results.csv_path}" download>📊 CSV</a>` : ''}
+        ${results.json_path ? `<a class="dl-btn" href="${results.json_path}" download>📄 JSON</a>` : ''}
+      </div>
+    </div>
+
+    ${results.html_report ? `
+    <div class="report-link-box">
+      <div class="icon">📋</div>
+      <div class="text">
+        <h3>Full HTML Report</h3>
+        <p>Complete analysis with literature evidence per gene</p>
+      </div>
+      <a href="${results.html_report}" target="_blank">Open Report →</a>
+    </div>` : ''}
+
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-n">${biomarkers.length}</div><div class="stat-l">Biomarkers</div></div>
+      <div class="stat-card"><div class="stat-n" style="color:#fca5a5">${upCount}</div><div class="stat-l">Upregulated</div></div>
+      <div class="stat-card"><div class="stat-n" style="color:#7dd3fc">${downCount}</div><div class="stat-l">Downregulated</div></div>
+      <div class="stat-card"><div class="stat-n" style="color:var(--accent3)">${pathCount}</div><div class="stat-l">Enriched Pathways</div></div>
+    </div>`;
+
+    // Biomarker table
+    if(biomarkers.length > 0) {
+      const maxScore = Math.max(...biomarkers.map(b => b.biomarker_score || 0));
+      html += `
+      <div class="bm-table-wrap">
+        <div class="bm-table-head">
+          <h3>🏆 Biomarker Rankings</h3>
+        </div>
+        <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Gene</th><th>Score</th><th>Dir</th>
+              <th>log₂FC</th><th>adj.p</th><th>Pathways</th><th>Network</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${biomarkers.slice(0,20).map((b,i) => `
+            <tr>
+              <td class="rank-num">${b.rank || i+1}</td>
+              <td class="gene-name">${b.gene}</td>
+              <td>
+                <div class="score-bar-wrap">
+                  <div class="score-bar"><div class="score-fill" style="width:${(b.biomarker_score/maxScore)*100}%"></div></div>
+                  <span class="score-val">${(b.biomarker_score||0).toFixed(3)}</span>
+                </div>
+              </td>
+              <td><span class="${b.direction==='UP'?'dir-up':'dir-dn'}">${b.direction==='UP'?'↑ UP':'↓ DN'}</span></td>
+              <td class="${(b.logFC||0)>=0?'fc-pos':'fc-neg'}">${(b.logFC||0)>=0?'+':''}${(b.logFC||0).toFixed(2)}</td>
+              <td class="pval">${fmtPval(b.adj_pvalue)}</td>
+              <td class="pval">${b.pathway_count||0}</td>
+              <td class="pval">${(b.network_score||0).toFixed(3)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>`;
+    }
+
+    // Plots
+    const plotEntries = Object.entries(plots).filter(([k,v])=>v);
+    if(plotEntries.length > 0) {
+      html += `<div class="plots-grid">`;
+      const labels = {biomarker_scores:'Biomarker Score Distribution',ppi_network:'PPI Network',heatmap:'DEG Heatmap'};
+      plotEntries.forEach(([key, src]) => {
+        html += `
+        <div class="plot-card">
+          <div class="plot-card-head">📈 ${labels[key]||key}</div>
+          <img src="${src}?t=${Date.now()}" alt="${key}" onerror="this.parentElement.innerHTML='<div class=plot-placeholder>Image not yet generated</div>'">
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // Enrichment
+    const enrichEntries = Object.entries(enrichment).filter(([k,v])=>v&&v.length>0);
+    if(enrichEntries.length > 0) {
+      html += `<div style="font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:12px">🔬 Pathway Enrichment</div>`;
+      html += `<div class="enrich-grid">`;
+      enrichEntries.slice(0,4).forEach(([cat, terms]) => {
+        html += `
+        <div class="enrich-card">
+          <div class="enrich-card-head">${cat}</div>
+          ${terms.slice(0,6).map(t => `
+          <div class="enrich-item">
+            <div class="enrich-bar"></div>
+            <div class="enrich-term">${(t.term||'').substring(0,55)}${(t.term||'').length>55?'…':''}</div>
+            <div class="enrich-p">${fmtPval(t.adj_pvalue)}</div>
+          </div>`).join('')}
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // Hub genes
+    if(hubGenes.length > 0) {
+      html += `<div style="font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:12px">🕸️ Hub Genes (PPI Network)</div>`;
+      html += `<div class="hub-grid">`;
+      hubGenes.slice(0,12).forEach((g, i) => {
+        html += `
+        <div class="hub-card">
+          <span class="hub-rank">#${i+1}</span>
+          <span class="hub-name">${g.gene}</span>
+          <span class="hub-score">${(g.hub_score||0).toFixed(3)}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    document.getElementById('resultsContent').innerHTML = html;
+  }, 600);
+}
+
+function fmtPval(p) {
+  if(!p && p!==0) return 'N/A';
+  if(p < 0.001) return p.toExponential(1);
+  return p.toFixed(3);
+}
+
+function addJobToHistory(id, disease, status) {
+  jobHistory.unshift({id, disease, status, time: new Date().toLocaleTimeString()});
+  renderJobs();
+}
+
+function updateJobStatus(id, status) {
+  const j = jobHistory.find(j => j.id === id);
+  if(j) { j.status = status; renderJobs(); }
+}
+
+function renderJobs() {
+  const el = document.getElementById('jobList');
+  if(jobHistory.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.8rem;font-family:\'Space Mono\',monospace;text-align:center;padding:20px 0">No jobs yet</div>';
+    return;
+  }
+  el.innerHTML = jobHistory.slice(0,8).map(j => `
+    <div class="job-item" onclick="loadJob('${j.id}')">
+      <span class="job-dot dot-${j.status}"></span>
+      <span class="job-name">${j.disease}</span>
+      <span class="job-meta">${j.id} · ${j.time}</span>
+    </div>`).join('');
+}
+
+async function loadJob(id) {
+  try {
+    const res = await fetch(`/api/jobs/${id}`);
+    const job = await res.json();
+    if(job.status === 'completed' && job.results) {
+      currentJobId = id;
+      document.getElementById('view-idle').style.display = 'none';
+      document.getElementById('view-running').style.display = 'none';
+      document.getElementById('view-results').style.display = 'block';
+      showResults(job.results);
+    } else if(job.status === 'running') {
+      showRunning(job.disease);
+      streamJob(id);
+    }
+  } catch(e) {}
+}
+</script>
+</body>
+</html>
